@@ -27,6 +27,25 @@ A starting scaffold for an AI workflow platform with:
 - `GET /workflows/{workflow_id}` — inspect workflow state
 - `GET /tasks/{task_id}` — inspect task state
 
+## Manager Agent
+
+A lightweight manager agent is now available under `agent_manager/`.
+It is designed to act as your mentor for this project, helping you think through architecture, plan work, and choose the next steps.
+
+Use:
+
+```powershell
+python -m agent_manager.manager_agent "Build the initial workflow planner and task executor"
+```
+
+Or start a direct chat session:
+
+```powershell
+python -m agent_manager.manager_agent
+```
+
+Set `OPENAI_API_KEY` for AI-powered guidance, or run without it for a local fallback mentor response.
+
 ## Next Steps
 
 This scaffold is intentionally minimal for Phase 1:
