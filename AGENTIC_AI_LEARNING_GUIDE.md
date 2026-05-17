@@ -362,6 +362,226 @@ while workflow_not_done:
 
 ---
 
+## How Frontend, Backend, and Workers Work Together
+
+### Frontend (React/Next.js)
+- Presents the UI to the user.
+- Lets the user submit workflow goals.
+- Calls backend REST endpoints like `POST /workflows/` and `GET /workflows/{id}`.
+- Displays workflow status, task progress, logs, and final output.
+
+### Backend (FastAPI)
+- Receives requests from the frontend.
+- Validates input and stores workflow/task records in the database.
+- Creates tasks and enqueues them for execution.
+- Exposes endpoints for status checks and results retrieval.
+
+### Worker / Queue / Database
+- The worker reads tasks from the queue (Redis or a simple in-memory queue).
+- It executes the task logic, which may use agent reasoning and tools.
+- It updates task status and writes results back to the database.
+- The backend reads from the database when the frontend asks for status.
+
+### Simple flow example
+1. User submits workflow through React.
+2. React sends `POST /workflows/` with the goal.
+3. FastAPI creates the workflow and tasks in PostgreSQL.
+4. FastAPI adds tasks to Redis.
+5. Worker picks up a task and executes it.
+6. Worker updates task status in PostgreSQL.
+7. Frontend polls or refreshes `GET /workflows/{id}`.
+8. User sees progress and output.
+
+---
+
+## What a Team Lead Decides First
+
+As a project lead, after defining the objective, the next decisions are:
+
+1. **Who is the user?**
+   - Internal engineer? Product manager? External customer?
+   - That determines the UI and feature expectations.
+
+2. **What is the MVP?**
+   - The smallest useful product that delivers real value.
+   - For this project, the MVP is: submit a workflow, create tasks, execute them asynchronously, store results, and show status.
+
+3. **What are the success criteria?**
+   - Example: API accepts workflow requests, tasks run, failures retry, and status is visible.
+   - This prevents scope creep and keeps the team focused.
+
+4. **What is the architecture boundary?**
+   - Frontend for UI
+   - Backend for API and orchestration
+   - Worker for execution
+   - Queue for task distribution
+   - Database for persistence
+
+5. **What should we build first?**
+   - Build the backend API and data model first.
+   - Then add the worker and queue.
+   - Then build the frontend to use the API.
+
+---
+
+## First Practical Build Steps
+
+These are the exact first components to create:
+
+1. **Database model**
+   - `workflows` table
+   - `tasks` table
+   - `execution_logs` table
+
+2. **Backend API**
+   - `POST /workflows/` to start a workflow
+   - `GET /workflows/{workflow_id}` to read workflow state
+   - `GET /tasks/{task_id}` to read task state
+
+3. **Worker**
+   - A simple process that reads queued tasks and executes them
+   - Update task status to `running`, `failed`, or `done`
+
+4. **Frontend UI**
+   - A form to submit workflow goals
+   - A page to show workflow and task progress
+   - A page to show final output and logs
+
+---
+
+## Why this order matters
+
+- **Backend first** gives you a working API that can be tested independently.
+- **Worker next** makes the system execute tasks, which is the core behavior.
+- **Frontend last** lets you build a usable interface on a stable backend.
+
+This approach makes the project manageable and helps you learn each layer step by step.
+
+---
+
+## Phase 1 Task List and Reasoning
+
+### Phase 1 objective
+Build a minimum viable workflow platform where:
+- the user can submit a workflow request via a simple UI,
+- FastAPI receives the request and records it,
+- one worker picks up the task and executes it,
+- the system stores status and result,
+- the UI can show progress and output.
+
+### Task 1: Define the data model and API contract
+- Create the database schema for `workflows`, `tasks`, and `execution_logs`.
+- Decide what data each record stores.
+- Define the first REST endpoints:
+  - `POST /workflows/`
+  - `GET /workflows/{workflow_id}`
+  - `GET /tasks/{task_id}`
+
+**Reasoning:** This is the foundation. If the data model and API contract are clear, the rest of the system can be built in layers.
+
+### Task 2: Implement the backend workflow creation
+- Build the FastAPI endpoint for `POST /workflows/`.
+- Validate the incoming request and create a workflow record.
+- Create one or more task records for the workflow.
+- Return the workflow ID and initial status.
+
+**Reasoning:** The first vertical slice should handle input from the user and persist the workflow. This proves the API and database flow end to end.
+
+### Task 3: Add a simple task queue and worker loop
+- Start with a simple in-memory queue or a single Redis list.
+- Build one worker that reads tasks and executes them.
+- Update task status to `running`, `completed`, or `failed`.
+- Write a placeholder task executor that can run a simple action.
+
+**Reasoning:** The worker is the core engine. A single worker proves the async execution model before adding complexity.
+
+### Task 4: Store execution results and logs
+- Save the task output and execution logs to the database.
+- Link logs to the workflow and task records.
+- Make sure failures are recorded with an error message.
+
+**Reasoning:** The platform is only useful if you can inspect what happened. Logs and results are critical for debugging and verification.
+
+### Task 5: Implement status query endpoints
+- Build `GET /workflows/{workflow_id}` to return workflow and task progress.
+- Build `GET /tasks/{task_id}` for task-level details.
+- Return clear status fields: `pending`, `running`, `completed`, `failed`.
+
+**Reasoning:** Users need feedback. Status endpoints make the system observable and support the UI.
+
+### Task 6: Build a minimal frontend UI
+- Create a very simple UI with one form to submit workflow requests.
+- Add a results page or panel to show workflow status and final output.
+- Use the backend REST API to submit the request and fetch status.
+
+**Reasoning:** The UI ties the system together and gives you a real product feel, even if it is simple.
+
+### Task 7: Validate the end-to-end flow
+- Submit a workflow through the UI.
+- Confirm the backend creates the workflow and tasks.
+- Confirm the worker executes the task.
+- Confirm the UI shows status and final output.
+
+**Reasoning:** A working end-to-end flow is the true MVP. It proves that the pieces can talk to each other.
+
+---
+
+## Beginner concepts: endpoints, databases, and architecture
+
+### What is an endpoint?
+An endpoint is a URL that the frontend uses to talk to the backend.
+- The backend exposes endpoints like `POST /workflows/` and `GET /workflows/{id}`.
+- The frontend sends data to these URLs and receives JSON back.
+- Think of an endpoint as a door in your backend that accepts requests and returns responses.
+
+### What is a database?
+A database is where your app stores information so it can remember it later.
+- For this project, you store workflows, tasks, and logs in the database.
+- The backend writes data when something happens, and reads data when someone asks for it.
+- The database is not the code itself; it is the storage behind your system.
+
+### What is architecture?
+Architecture is the plan for how all the pieces fit together.
+- It is not code, it is the structure of the system.
+- For your project, the architecture defines:
+  - the frontend UI,
+  - the backend API,
+  - the worker that executes tasks,
+  - the queue that passes work, and
+  - the database that stores state.
+- Good architecture means each part has a clear job and the system is easy to understand.
+
+### How to think about it as a beginner
+- The frontend is what the user sees.
+- The backend is the server that handles requests.
+- The endpoint is the specific function on the backend the frontend calls.
+- The database is where the backend saves and reads the data.
+- The worker is the background engine that does the actual task work.
+
+### Simple analogy
+- User = customer
+- Frontend = waiter taking the order
+- Endpoint = the menu item the waiter chooses
+- Backend = kitchen manager receiving the order
+- Database = order ticket and order history
+- Worker = cook preparing the dish
+- Result = the finished meal returned to the customer
+
+---
+
+## Why start here?
+
+- **Smallest useful slice:** You get a working product with minimal features.
+- **Fast feedback:** You can test the full path early.
+- **Low risk:** You avoid adding agents, memory, or distributed systems too soon.
+- **Build confidence:** Once Phase 1 works, you can extend with real planning and task breakdown.
+
+This is the right start for a Phase 1 MVP, because it delivers a functioning workflow platform without over-engineering.
+
+```
+
+---
+
 ## Recommended Reading
 
 After you build Phase 1, look into:
