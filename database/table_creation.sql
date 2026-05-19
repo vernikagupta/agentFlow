@@ -4,7 +4,7 @@
 -- Run in pgAdmin: select agentflow db > Tools > Query Tool > paste > Run
 -- =============================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;  
 
 -- =============================================================
 -- TABLE 1: workflows
@@ -79,23 +79,23 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_task_id
 -- =============================================================
 -- AUTO UPDATE updated_at ON workflows AND tasks
 -- =============================================================
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION set_updated_at()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     NEW.updated_at = NOW();
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_workflows_updated_at ON workflows;
-CREATE TRIGGER trg_workflows_updated_at
-    BEFORE UPDATE ON workflows
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+-- DROP TRIGGER IF EXISTS trg_workflows_updated_at ON workflows;
+-- CREATE TRIGGER trg_workflows_updated_at
+--     BEFORE UPDATE ON workflows
+--     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
-CREATE TRIGGER trg_tasks_updated_at
-    BEFORE UPDATE ON tasks
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+-- DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
+-- CREATE TRIGGER trg_tasks_updated_at
+--     BEFORE UPDATE ON tasks
+--     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- =============================================================
 -- VERIFY: run this after to confirm all 3 tables exist

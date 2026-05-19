@@ -17,6 +17,38 @@ A starting scaffold for an AI workflow platform with:
 
 ## Getting Started
 
+### Backend (Python)
+
+```powershell
+cd c:\agentFlow
+py -3 -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+copy .env.example .env
+uvicorn backend.main:app --reload
+```
+
+API: `http://localhost:8000` — health check: `GET /health`
+
+In Cursor, select interpreter: `venv\Scripts\python.exe` (fixes `psycopg2` import warnings).
+
+### Frontend (React)
+
+Requires [Node.js](https://nodejs.org/) with `npm` on your PATH (not only Cursor’s bundled `node`).
+
+```powershell
+cd c:\agentFlow
+npm create vite@latest frontend -- --template react-ts
+cd frontend
+npm install
+npm install axios
+npm run dev
+```
+
+UI: `http://localhost:5173` (CORS is configured on the API for this origin).
+
+### Docker (when added)
+
 1. Copy `.env.example` to `.env`
 2. Run `docker compose up --build`
 3. Hit the API at `http://localhost:8000`

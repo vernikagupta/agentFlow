@@ -1,2 +1,20 @@
-openai
+# API
+fastapi
+uvicorn[standard]
+
+# Config
 python-dotenv
+pydantic-settings
+
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Queue / cache
+redis
+
+# Agents / LLM
+openai
+
+# HTTP client
+httpx
