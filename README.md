@@ -22,10 +22,31 @@ A starting scaffold for an AI workflow platform with:
 ```powershell
 cd c:\agentFlow
 py -3 -m venv venv
-.\venv\Scripts\Activate.ps1
+.\activate_venv.ps1
 pip install -r requirements.txt
 copy .env.example .env
 uvicorn backend.main:app --reload
+```
+
+If `Activate.ps1` fails with *running scripts is disabled*, use one of these from the project root:
+
+```powershell
+.\activate_venv.ps1
+```
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\venv\Scripts\Activate.ps1
+```
+
+```cmd
+activate_venv.cmd
+```
+
+Or skip activate and run Python directly:
+
+```powershell
+.\venv\Scripts\python.exe -m uvicorn backend.main:app --reload
 ```
 
 API: `http://localhost:8000` — health check: `GET /health`

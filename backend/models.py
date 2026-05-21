@@ -69,8 +69,14 @@ class Workflow(Base):
     __tablename__ = "workflows"
 
     id = _pg_uuid_pk()
-    # Human-readable id for logs/UI (WF_101); separate from UUID so references stay short.
-    request_id = Column(String(50), nullable=False, unique=True)
+    # WF_1, WF_2, … assigned by Postgres sequence (workflow_request_id_seq) on INSERT.
+    # Do not set in Python — avoids race conditions when many workflows are created at once.
+    request_id = Column(
+        String(50),
+        nullable=False,
+        unique=True,
+        server_default=text("'WF_' || nextval('workflow_request_id_seq')::text"),
+    )
     goal = Column(Text, nullable=False)
     # CHECK in SQL enforces valid states; mirrored here so bad values fail before INSERT.
     status = Column(Text, nullable=False, server_default="pending")

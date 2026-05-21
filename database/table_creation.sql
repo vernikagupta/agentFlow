@@ -2,9 +2,17 @@
 -- agentFlow PostgreSQL Schema v2
 -- Built through reasoning session on 2026-05-18
 -- Run in pgAdmin: select agentflow db > Tools > Query Tool > paste > Run
+--
+-- FRESH database: run this entire file (lines below through indexes).
+-- EXISTING database with wrong schema: either run database/migrate_request_id_sequence.sql
+-- OR (dev only, deletes all data) run database/reset_and_create.sql
 -- =============================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;  
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Human-readable workflow ids: WF_1, WF_2, …
+-- Postgres sequence avoids collisions under concurrent POST /workflows (atomic nextval).
+CREATE SEQUENCE IF NOT EXISTS workflow_request_id_seq START 1;
 
 -- =============================================================
 -- TABLE 1: workflows
@@ -12,7 +20,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- =============================================================
 CREATE TABLE IF NOT EXISTS workflows (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    request_id      VARCHAR(50) NOT NULL UNIQUE,       -- human readable e.g. WF_101
+    request_id      VARCHAR(50) NOT NULL UNIQUE
+                        DEFAULT ('WF_' || nextval('workflow_request_id_seq')::text),
     goal            TEXT NOT NULL,                     -- the user's submitted request
     status          TEXT NOT NULL DEFAULT 'pending'
                         CHECK (status IN ('pending', 'running', 'completed', 'failed')),
@@ -104,3 +113,6 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_task_id
 -- WHERE table_schema = 'public'
 -- ORDER BY table_name;
 
+-- =============================================================
+-- EXISTING DB: run database/migrate_request_id_sequence.sql (run that file).
+-- =============================================================
