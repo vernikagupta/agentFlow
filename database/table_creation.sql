@@ -62,9 +62,12 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);
 -- TABLE 3: execution_logs
 -- Append only. One row per agent step inside a task.
 -- Never update rows here, only INSERT.
+-- workflow_id: denormalized FK so you can list all logs for a workflow without joining tasks.
 -- =============================================================
 CREATE TABLE IF NOT EXISTS execution_logs (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id     UUID NOT NULL
+                        REFERENCES workflows (id) ON DELETE CASCADE,
     task_id         UUID NOT NULL
                         REFERENCES tasks (id) ON DELETE CASCADE,
     event_type      TEXT NOT NULL
@@ -75,12 +78,16 @@ CREATE TABLE IF NOT EXISTS execution_logs (
                             'tool_result',
                             'task_started',
                             'task_completed',
+                            'results_summary',
                             'error'
                         )),
     message         TEXT,                              -- human readable description
     payload         JSONB,                             -- structured data e.g. tool input/output
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_execution_logs_workflow_id
+    ON execution_logs (workflow_id, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_execution_logs_task_id
     ON execution_logs (task_id, created_at);
@@ -114,5 +121,8 @@ CREATE INDEX IF NOT EXISTS idx_execution_logs_task_id
 -- ORDER BY table_name;
 
 -- =============================================================
--- EXISTING DB: run database/migrate_request_id_sequence.sql (run that file).
+-- EXISTING DB migrations (run the file you need):
+--   database/migrate_request_id_sequence.sql
+--   database/migrate_execution_logs_workflow_id.sql
+--   database/migrate_execution_logs_results_summary_event.sql
 -- =============================================================

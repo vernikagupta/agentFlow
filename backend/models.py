@@ -4,8 +4,11 @@ SQLAlchemy ORM models for agentFlow.
 These classes mirror database/table_creation.sql so Python code and Postgres
 stay in sync. Run that SQL in pgAdmin first; models do not create tables on their own.
 
-Timestamps: created_at/updated_at are set by SQLAlchemy (default/onupdate), not by
-Postgres triggers. 
+Timestamps: Python only (DB triggers for updated_at are commented out in SQL).
+
+- INSERT: _pg_created_at / _pg_updated_at defaults (func.now()).
+- UPDATE: mutate the ORM row in memory, then commit() — _pg_updated_at onupdate
+  refreshes updated_at automatically.
 """
 
 from sqlalchemy import (
@@ -45,12 +48,7 @@ def _pg_created_at() -> Column:
 
 
 def _pg_updated_at() -> Column:
-    """
-    Set on INSERT (default) and refreshed on every ORM UPDATE (onupdate).
-
-    Why Python, not a DB trigger: the app owns lifecycle updates so behavior is
-    visible in code and the same in tests without relying on Postgres trigger setup.
-    """
+    """INSERT default=now(); ORM UPDATE refreshes via onupdate=func.now()."""
     return Column(
         DateTime(timezone=True),
         nullable=False,
@@ -89,6 +87,11 @@ class Workflow(Base):
     # Planner creates many tasks per workflow; cascade matches ON DELETE CASCADE in SQL.
     tasks = relationship(
         "Task",
+        back_populates="workflow",
+        cascade="all, delete-orphan",
+    )
+    execution_logs = relationship(
+        "ExecutionLog",
         back_populates="workflow",
         cascade="all, delete-orphan",
     )
@@ -162,6 +165,11 @@ class ExecutionLog(Base):
     __tablename__ = "execution_logs"
 
     id = _pg_uuid_pk()
+    workflow_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("workflows.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     task_id = Column(
         UUID(as_uuid=True),
         ForeignKey("tasks.id", ondelete="CASCADE"),
@@ -172,17 +180,18 @@ class ExecutionLog(Base):
     payload = Column(JSONB, nullable=True)
     created_at = _pg_created_at()
 
+    workflow = relationship("Workflow", back_populates="execution_logs")
     task = relationship("Task", back_populates="execution_logs")
 
     __table_args__ = (
         CheckConstraint(
             "event_type IN ("
             "'llm_decision', 'tool_selection', 'tool_run', 'tool_result', "
-            "'task_started', 'task_completed', 'error'"
+            "'task_started', 'task_completed', 'results_summary', 'error'"
             ")",
             name="execution_logs_event_type_check",
         ),
-        # Composite index: list all events for a task in time order (see SQL schema).
+        Index("idx_execution_logs_workflow_id", "workflow_id", "created_at"),
         Index("idx_execution_logs_task_id", "task_id", "created_at"),
     )
 

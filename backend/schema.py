@@ -92,8 +92,9 @@ class WorkflowResponse(BaseModel):
         "tasks": []
       }
 
-    Later, when done, result might be {"report": "...", "sources": [...]} — still JSON,
-    not a string. The UI picks fields (e.g. result.report) to show readable text.
+    When status is completed, result is JSON from the summarizer LLM, e.g.:
+      {"summary": "...", "reasoning": "..."}
+    Poll GET until status is completed, then show result.summary to the user.
     """
 
     request_id: str

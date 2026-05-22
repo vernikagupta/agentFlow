@@ -53,6 +53,8 @@ CREATE INDEX idx_tasks_status ON tasks (status);
 
 CREATE TABLE execution_logs (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id     UUID NOT NULL
+                        REFERENCES workflows (id) ON DELETE CASCADE,
     task_id         UUID NOT NULL
                         REFERENCES tasks (id) ON DELETE CASCADE,
     event_type      TEXT NOT NULL
@@ -63,6 +65,7 @@ CREATE TABLE execution_logs (
                             'tool_result',
                             'task_started',
                             'task_completed',
+                            'results_summary',
                             'error'
                         )),
     message         TEXT,
@@ -70,6 +73,7 @@ CREATE TABLE execution_logs (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX idx_execution_logs_workflow_id ON execution_logs (workflow_id, created_at);
 CREATE INDEX idx_execution_logs_task_id ON execution_logs (task_id, created_at);
 
 -- Quick verify (tables exist):

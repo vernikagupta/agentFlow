@@ -14,6 +14,8 @@ FastAPI glossary (used below)
   BackgroundTasks — run a function after the HTTP response is sent (non-blocking).
 """
 
+import os
+
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -132,6 +134,12 @@ def create_workflow(
     db.add(workflow)       # stage INSERT in this session
     db.commit()            # send SQL to Postgres
     db.refresh(workflow)   # reload row so request_id (set by DB default) is on the object
+
+    # Debug: watch uvicorn terminal (agent prints appear after this HTTP response).
+    if os.getenv("AGENTFLOW_DEBUG", "1").strip().lower() not in ("0", "false", "no"):
+        print(f"\n[DEBUG] --- POST /workflows IN ---\n  goal: {body.goal!r}")
+        print(f"[DEBUG] --- POST /workflows OUT ---\n  request_id: {workflow.request_id!r}\n  status: {workflow.status!r}")
+        print(f"[DEBUG] --- background task queued ---\n  run_workflow({workflow.request_id!r})")
 
     # After the client gets 201, run_workflow runs (planner → tasks → worker later).
     background_tasks.add_task(run_workflow, workflow.request_id)

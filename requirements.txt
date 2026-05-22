@@ -14,7 +14,9 @@ psycopg2-binary
 redis
 
 # Agents / LLM
+groq
 openai
+tavily-python
 
 # HTTP client
 httpx
